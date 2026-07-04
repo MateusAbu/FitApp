@@ -153,3 +153,136 @@ create policy "Allow read/write access to student_progress"
   to authenticated
   using (auth.uid() = personal_id or auth.uid() = student_id)
   with check (auth.uid() = personal_id or auth.uid() = student_id);
+
+-- 8. Tabela de Templates de Fichas (Workout Templates)
+create table public.workout_templates (
+  id uuid default gen_random_uuid() primary key,
+  personal_id uuid references public.profiles(id) on delete cascade not null,
+  name text not null,
+  division char(1) not null default 'A',
+  created_at timestamp with time zone default timezone('utc'::text, now()) not null
+);
+
+-- 9. Tabela de Relacionamento de Exercícios em Templates (Template Exercises)
+create table public.template_exercises (
+  id uuid default gen_random_uuid() primary key,
+  template_id uuid references public.workout_templates(id) on delete cascade not null,
+  exercise_id uuid references public.exercises(id) on delete cascade not null,
+  sets integer not null default 3,
+  reps varchar(20) not null default '12',
+  load numeric(6, 2),
+  rest_seconds integer not null default 60,
+  sequence_order integer not null default 0,
+  created_at timestamp with time zone default timezone('utc'::text, now()) not null
+);
+
+-- 10. Tabela de Comentários / Chat (Student Comments)
+create table public.student_comments (
+  id uuid default gen_random_uuid() primary key,
+  student_id uuid references public.profiles(id) on delete cascade not null,
+  personal_id uuid references public.profiles(id) on delete cascade not null,
+  author_role user_role not null,
+  author_name text not null,
+  message text not null,
+  created_at timestamp with time zone default timezone('utc'::text, now()) not null
+);
+
+-- 11. Tabela de Medidas Corporais (Student Measurements)
+create table public.student_measurements (
+  id uuid default gen_random_uuid() primary key,
+  student_id uuid references public.profiles(id) on delete cascade not null,
+  weight numeric(5, 2) not null,
+  fat_percent numeric(4, 2),
+  chest numeric(5, 2),
+  waist numeric(5, 2),
+  hips numeric(5, 2),
+  biceps_left numeric(4, 2),
+  biceps_right numeric(4, 2),
+  forearm_left numeric(4, 2),
+  forearm_right numeric(4, 2),
+  thigh_left numeric(4, 2),
+  thigh_right numeric(4, 2),
+  calf_left numeric(4, 2),
+  calf_right numeric(4, 2),
+  created_at timestamp with time zone default timezone('utc'::text, now()) not null
+);
+
+-- 12. Tabela de Documentos Compartilhados (Student Documents)
+create table public.student_documents (
+  id uuid default gen_random_uuid() primary key,
+  student_id uuid references public.profiles(id) on delete cascade not null,
+  title text not null,
+  type text not null, -- 'diet', 'exam', 'training'
+  file_url text not null,
+  created_at timestamp with time zone default timezone('utc'::text, now()) not null
+);
+
+-- Habilitar RLS nas novas tabelas
+alter table public.workout_templates enable row level security;
+alter table public.template_exercises enable row level security;
+alter table public.student_comments enable row level security;
+alter table public.student_measurements enable row level security;
+alter table public.student_documents enable row level security;
+
+-- POLÍTICAS DE SEGURANÇA (RLS) PARA AS NOVAS TABELAS
+
+-- Workout Templates:
+create policy "Allow read/write access to workout_templates"
+  on public.workout_templates for all
+  to authenticated
+  using (auth.uid() = personal_id)
+  with check (auth.uid() = personal_id);
+
+-- Template Exercises:
+create policy "Allow read/write access to template_exercises"
+  on public.template_exercises for all
+  to authenticated
+  using (
+    exists (
+      select 1 from public.workout_templates wt
+      where wt.id = template_id and wt.personal_id = auth.uid()
+    )
+  );
+
+-- Student Comments:
+create policy "Allow read/write access to student_comments"
+  on public.student_comments for all
+  to authenticated
+  using (auth.uid() = personal_id or auth.uid() = student_id)
+  with check (auth.uid() = personal_id or auth.uid() = student_id);
+
+-- Student Measurements:
+create policy "Allow select access to measurements"
+  on public.student_measurements for select
+  to authenticated
+  using (
+    auth.uid() = student_id or 
+    exists (
+      select 1 from public.profiles p 
+      where p.id = student_id and p.personal_id = auth.uid()
+    )
+  );
+
+create policy "Allow insert access to measurements"
+  on public.student_measurements for insert
+  to authenticated
+  with check (auth.uid() = student_id);
+
+-- Student Documents:
+create policy "Allow select access to documents"
+  on public.student_documents for select
+  to authenticated
+  using (
+    auth.uid() = student_id or 
+    exists (
+      select 1 from public.profiles p 
+      where p.id = student_id and p.personal_id = auth.uid()
+    )
+  );
+
+create policy "Allow insert/delete access to documents"
+  on public.student_documents for all
+  to authenticated
+  using (auth.uid() = student_id)
+  with check (auth.uid() = student_id);
+
