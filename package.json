@@ -6,6 +6,7 @@
     "start": "expo start",
     "android": "expo start --android",
     "ios": "expo start --ios",
+    "ios:vpn": "expo start --localhost --ios",
     "web": "expo start --web",
     "test": "jest"
   },
