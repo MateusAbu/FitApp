@@ -96,12 +96,12 @@ export default function WorkoutExecution() {
 
   const logProgressMutation = useMutation({
     mutationFn: async () => {
-      if (!profile?.id || !workoutId) return;
+      if (!profile?.id || !profile.personalId || !workoutId) return;
 
       // 1. Insert overall progress log (optional)
       const generalProgress = {
         student_id: profile.id,
-        personal_id: profile.personalId || 'demo-personal-id',
+        personal_id: profile.personalId,
         workout_id: workoutId,
         load: null,
         photo_url: evolutionPhotoUrl || null,
@@ -123,7 +123,7 @@ export default function WorkoutExecution() {
           if (loadNum !== null || notesText !== null) {
             const exerciseProgress = {
               student_id: profile.id,
-              personal_id: profile.personalId || 'demo-personal-id',
+              personal_id: profile.personalId,
               workout_id: workoutId,
               exercise_id: item.exercise_id,
               load: loadNum,

@@ -8,8 +8,6 @@ import { Button } from '../../shared/components/Button';
 import { Typography } from '../../shared/components/Typography';
 import { validateEmail, validatePassword } from '../../shared/utils/validators';
 import { useTheme } from '../../providers/ThemeProvider';
-import { useAuthStore } from '../../store/useAuthStore';
-import { useThemeStore, themePalettes } from '../../store/useThemeStore';
 
 export default function Login() {
   const { t } = useTranslation();
@@ -47,34 +45,6 @@ export default function Login() {
     } finally {
       setLoading(false);
     }
-  };
-
-  const handleDemoPersonalLogin = () => {
-    // Definir tema de preview para o personal (Preset Forge)
-    useThemeStore.getState().setTheme(themePalettes.forge);
-
-    // Logar como Personal
-    useAuthStore.getState().setSession('demo-personal-token', {
-      id: 'demo-personal-id',
-      email: 'personal@fitapp.com',
-      role: 'personal',
-      fullName: 'Dr. Mateus (Personal Demo)',
-      personalId: null,
-    });
-  };
-
-  const handleDemoStudentLogin = () => {
-    // Definir tema de preview para o aluno (Preset Ocean)
-    useThemeStore.getState().setTheme(themePalettes.ocean);
-
-    // Logar como Aluno
-    useAuthStore.getState().setSession('demo-student-token', {
-      id: 'demo-student-id',
-      email: 'aluno@fitapp.com',
-      role: 'student',
-      fullName: 'Thiago Silva (Aluno Demo)',
-      personalId: 'demo-personal-id',
-    });
   };
 
   return (
@@ -124,31 +94,6 @@ export default function Login() {
             {t('auth.registerLink')}
           </Typography>
         </TouchableOpacity>
-
-        {/* Divisor Visual para Modo Teste */}
-        <View style={styles.dividerContainer}>
-          <View style={[styles.dividerLine, { backgroundColor: theme.border }]} />
-          <Typography variant="caption" colorType="textMuted" style={styles.dividerText}>
-            {t('auth.orPreview', 'OU TESTE RÁPIDO (PREVIEW)')}
-          </Typography>
-          <View style={[styles.dividerLine, { backgroundColor: theme.border }]} />
-        </View>
-
-        {/* Botões de Acesso Rápido de Demonstração */}
-        <View style={styles.demoButtonsContainer}>
-          <Button
-            title={t('auth.enterAsPersonal', 'Entrar como Personal')}
-            onPress={handleDemoPersonalLogin}
-            variant="secondary"
-            style={styles.demoButton}
-          />
-          <Button
-            title={t('auth.enterAsStudent', 'Entrar como Aluno')}
-            onPress={handleDemoStudentLogin}
-            variant="secondary"
-            style={styles.demoButton}
-          />
-        </View>
       </View>
     </ScrollView>
   );
@@ -179,26 +124,5 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginTop: 20,
     padding: 8,
-  },
-  dividerContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginVertical: 24,
-  },
-  dividerLine: {
-    flex: 1,
-    height: 1,
-  },
-  dividerText: {
-    marginHorizontal: 12,
-    fontSize: 11,
-    letterSpacing: 1,
-    fontWeight: '600',
-  },
-  demoButtonsContainer: {
-    width: '100%',
-  },
-  demoButton: {
-    marginVertical: 6,
   },
 });

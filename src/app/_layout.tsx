@@ -33,12 +33,6 @@ function RootLayoutNav() {
 
   // Sincronização inicial e monitoramento do estado de login
   useEffect(() => {
-    const currentToken = useAuthStore.getState().sessionToken;
-    if (currentToken && currentToken.startsWith('demo-')) {
-      SplashScreen.hideAsync();
-      return;
-    }
-
     // Busca sessão ativa ao carregar
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) {
@@ -52,11 +46,6 @@ function RootLayoutNav() {
 
     // Inscrição para mudanças no Supabase Auth
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      const latestToken = useAuthStore.getState().sessionToken;
-      if (latestToken && latestToken.startsWith('demo-')) {
-        return;
-      }
-
       if (session) {
         fetchProfile(session.user.id, session.access_token);
       } else {
