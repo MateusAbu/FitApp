@@ -411,35 +411,29 @@ export default function StudentDetail() {
   };
 
   const renderPastWorkouts = () => {
-    const historyList = [
-      { name: t('personal.studentDetail.fullBodyBeginner', 'Full Body Iniciante'), period: '12 jan — 09 mar 2026', weeks: 8, adherence: 89 },
-      { name: t('personal.studentDetail.upperLower4x', 'Upper/Lower 4x'), period: '14 nov — 09 jan 2026', weeks: 8, adherence: 72 },
-    ];
+    const pastWorkouts = (workouts || []).filter((w: any) => !w.is_active);
     return (
       <View style={styles.tabScroll}>
         <Typography variant="mono" colorType="textMuted" style={styles.historySectionTitle}>{t('personal.studentDetail.workoutHistory', 'HISTÓRICO DE FICHAS')}</Typography>
-        {historyList.map((h, i) => (
-          <Card key={i} padding={14} style={styles.historyCard}>
-            <View style={styles.historyHeader}>
-              <View>
-                <Typography variant="bold" style={styles.historyName}>{h.name}</Typography>
-                <Typography variant="mono" colorType="textDim" style={styles.historyPeriod}>{h.period}</Typography>
+        {pastWorkouts.length > 0 ? (
+          pastWorkouts.map((w: any) => (
+            <Card key={w.id} padding={14} style={styles.historyCard}>
+              <View style={styles.historyHeader}>
+                <View>
+                  <Typography variant="bold" style={styles.historyName}>{w.name}</Typography>
+                  <Typography variant="mono" colorType="textDim" style={styles.historyPeriod}>
+                    {t('personal.studentDetail.createdOn', 'Criada em')} {new Date(w.created_at).toLocaleDateString('pt-BR')}
+                  </Typography>
+                </View>
+                <ChevronRight size={16} color={theme.textMuted} />
               </View>
-              <ChevronRight size={16} color={theme.textMuted} />
-            </View>
-            <View style={styles.historyDivider} />
-            <View style={styles.historyStatsRow}>
-              <View>
-                <Typography variant="mono" colorType="textMuted" style={styles.historyStatLabel}>{t('personal.studentDetail.duration', 'DURAÇÃO')}</Typography>
-                <Typography variant="mono" style={styles.historyStatVal}>{h.weeks} {t('personal.studentDetail.weeksShort', 'sem.')}</Typography>
-              </View>
-              <View>
-                <Typography variant="mono" colorType="textMuted" style={styles.historyStatLabel}>{t('personal.studentDetail.adherence', 'ADESÃO')}</Typography>
-                <Typography variant="mono" style={{ color: h.adherence >= 85 ? theme.success : theme.warn, fontWeight: '600' }}>{h.adherence}%</Typography>
-              </View>
-            </View>
-          </Card>
-        ))}
+            </Card>
+          ))
+        ) : (
+          <Typography variant="caption" colorType="textMuted" style={{ paddingVertical: 16, textAlign: 'center' }}>
+            {t('personal.studentDetail.noHistory', 'Nenhuma ficha anterior.')}
+          </Typography>
+        )}
       </View>
     );
   };

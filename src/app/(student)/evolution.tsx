@@ -60,7 +60,7 @@ export default function StudentEvolution() {
       if (!profile?.id) return [];
       const { data, error } = await supabase
         .from('student_progress')
-        .select('*')
+        .select('*, exercises(name)')
         .eq('student_id', profile.id)
         .order('created_at', { ascending: false });
 
@@ -128,22 +128,33 @@ export default function StudentEvolution() {
     setForm(prev => ({ ...prev, [field]: val }));
   };
 
-  // Dynamic weight history based on measurements
+  // Histórico de peso real (últimas 5 medições); vazio se ainda não houver.
   const weightHistory = measurements && measurements.length > 0
     ? [...measurements].reverse().map(m => m.weight).slice(-5)
-    : [67.1, 66.5, 65.9, 65.2, 64.8];
-  
-  const maxWeight = Math.max(...weightHistory);
-  const minWeight = Math.min(...weightHistory);
+    : [];
+
+  const maxWeight = weightHistory.length ? Math.max(...weightHistory) : 0;
+  const minWeight = weightHistory.length ? Math.min(...weightHistory) : 0;
 
   const latestMeasure = measurements?.[0];
 
-  const personalRecords = [
-    { exercise: t('student.evolution.benchPress', 'Supino Reto'), maxLoad: 60, delta: '+5.0 kg', date: t('student.evolution.daysAgo', 'Há {{count}} dias', { count: 3 }) },
-    { exercise: t('student.evolution.barbellRow', 'Remada Curvada'), maxLoad: 50, delta: '+3.0 kg', date: t('student.evolution.daysAgo', 'Há {{count}} dias', { count: 5 }) },
-    { exercise: t('student.evolution.dumbbellPress', 'Desenvolvimento Halteres'), maxLoad: 16, delta: '+2.0 kg', date: t('student.evolution.weeksAgo', 'Há {{count}} sem', { count: 1 }) },
-    { exercise: t('student.evolution.bicepsCurl', 'Rosca Direta'), maxLoad: 15, delta: '+1.5 kg', date: t('student.evolution.weeksAgo', 'Há {{count}} sem', { count: 1 }) },
-  ];
+  // Recordes reais: maior carga registrada por exercício no student_progress.
+  const personalRecords = React.useMemo(() => {
+    if (!progressList) return [];
+    const byExercise = new Map<string, { exercise: string; maxLoad: number; date: string }>();
+    for (const p of progressList as any[]) {
+      if (p.load == null || !p.exercise_id) continue;
+      const prev = byExercise.get(p.exercise_id);
+      if (!prev || p.load > prev.maxLoad) {
+        byExercise.set(p.exercise_id, {
+          exercise: p.exercises?.name || t('student.evolution.exerciseFallback', 'Exercício'),
+          maxLoad: p.load,
+          date: new Date(p.created_at).toLocaleDateString('pt-BR'),
+        });
+      }
+    }
+    return Array.from(byExercise.values()).sort((a, b) => b.maxLoad - a.maxLoad);
+  }, [progressList, t]);
 
   return (
     <ScrollView 
@@ -209,17 +220,23 @@ export default function StudentEvolution() {
           </View>
         </View>
 
-        <View style={styles.customBarChart}>
-          {weightHistory.map((val, idx) => {
-            const heightPct = maxWeight === minWeight ? 100 : ((val - minWeight + 1) / (maxWeight - minWeight + 1)) * 100;
-            return (
-              <View key={idx} style={styles.chartBarWrapper}>
-                <View style={[styles.chartBar, { height: `${heightPct}%`, backgroundColor: theme.primaryColor }]} />
-                <Typography variant="mono" style={styles.chartBarLabel}>{val}</Typography>
-              </View>
-            );
-          })}
-        </View>
+        {weightHistory.length > 0 ? (
+          <View style={styles.customBarChart}>
+            {weightHistory.map((val, idx) => {
+              const heightPct = maxWeight === minWeight ? 100 : ((val - minWeight + 1) / (maxWeight - minWeight + 1)) * 100;
+              return (
+                <View key={idx} style={styles.chartBarWrapper}>
+                  <View style={[styles.chartBar, { height: `${heightPct}%`, backgroundColor: theme.primaryColor }]} />
+                  <Typography variant="mono" style={styles.chartBarLabel}>{val}</Typography>
+                </View>
+              );
+            })}
+          </View>
+        ) : (
+          <Typography variant="caption" colorType="textMuted" style={{ paddingVertical: 24, textAlign: 'center' }}>
+            {t('student.evolution.noWeightHistory', 'Registre suas medidas para ver o histórico de peso.')}
+          </Typography>
+        )}
       </Card>
 
       {/* Latest Body Measurements (If any) */}
@@ -262,22 +279,23 @@ export default function StudentEvolution() {
           <Typography variant="h2" style={{ marginBottom: 0 }}>{t('student.evolution.prsTitle', 'Recordes Pessoais (PRs)')}</Typography>
         </View>
 
-        {personalRecords.map((item, idx) => (
-          <View key={idx} style={[styles.prRow, { borderBottomColor: theme.border }]}>
-            <View>
-              <Typography variant="bold" style={styles.prName}>{item.exercise}</Typography>
-              <Typography variant="caption" colorType="textMuted">{item.date}</Typography>
-            </View>
-            <View style={styles.prValues}>
-              <Typography variant="mono" style={styles.prLoad}>{item.maxLoad} kg</Typography>
-              <View style={[styles.deltaBadge, { backgroundColor: theme.primarySoft }]}>
-                <Typography variant="caption" colorType="primary" style={{ fontWeight: '600', fontSize: 11 }}>
-                  {item.delta}
-                </Typography>
+        {personalRecords.length > 0 ? (
+          personalRecords.map((item, idx) => (
+            <View key={idx} style={[styles.prRow, { borderBottomColor: theme.border }]}>
+              <View>
+                <Typography variant="bold" style={styles.prName}>{item.exercise}</Typography>
+                <Typography variant="caption" colorType="textMuted">{item.date}</Typography>
+              </View>
+              <View style={styles.prValues}>
+                <Typography variant="mono" style={styles.prLoad}>{item.maxLoad} kg</Typography>
               </View>
             </View>
-          </View>
-        ))}
+          ))
+        ) : (
+          <Typography variant="caption" colorType="textMuted" style={{ paddingVertical: 16, textAlign: 'center' }}>
+            {t('student.evolution.noPrs', 'Conclua treinos registrando cargas para ver seus recordes.')}
+          </Typography>
+        )}
       </Card>
 
       {/* Progress Photos Gallery */}
