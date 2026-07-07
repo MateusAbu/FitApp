@@ -286,3 +286,53 @@ create policy "Allow insert/delete access to documents"
   using (auth.uid() = student_id)
   with check (auth.uid() = student_id);
 
+
+-- ─────────────────────────────────────────────────────────────
+-- Criação automática do perfil no cadastro
+-- ─────────────────────────────────────────────────────────────
+-- Cria a linha em profiles quando um novo usuário entra no Auth.
+-- SECURITY DEFINER: ignora RLS e resolve o convite no servidor,
+-- então não depende de sessão/política de INSERT no cliente.
+create or replace function public.handle_new_user()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_role user_role := coalesce((new.raw_user_meta_data->>'role')::user_role, 'student');
+  v_personal_id uuid;
+  v_invite_code text;
+begin
+  if v_role = 'student' then
+    -- Resolve o Personal pelo código de convite informado no cadastro
+    select id into v_personal_id
+    from public.profiles
+    where invite_code = upper(new.raw_user_meta_data->>'invite_code')
+      and role = 'personal';
+    if v_personal_id is null then
+      raise exception 'Código de convite inválido';
+    end if;
+  else
+    -- Personal recebe um código de convite próprio
+    v_invite_code := upper(substr(md5(random()::text), 1, 6));
+  end if;
+
+  insert into public.profiles (id, email, role, full_name, personal_id, invite_code)
+  values (
+    new.id,
+    new.email,
+    v_role,
+    nullif(new.raw_user_meta_data->>'full_name', ''),
+    v_personal_id,
+    v_invite_code
+  );
+
+  return new;
+end;
+$$;
+
+drop trigger if exists on_auth_user_created on auth.users;
+create trigger on_auth_user_created
+  after insert on auth.users
+  for each row execute function public.handle_new_user();

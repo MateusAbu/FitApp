@@ -1,4 +1,10 @@
-import { validateEmail, validatePassword, validateInviteCode } from '../shared/utils/validators';
+import {
+  validateEmail,
+  validatePassword,
+  validatePasswordStrength,
+  validatePasswordMatch,
+  validateInviteCode,
+} from '../shared/utils/validators';
 
 describe('Validators Utility', () => {
   describe('validateEmail', () => {
@@ -27,6 +33,42 @@ describe('Validators Utility', () => {
 
     it('should return undefined for valid password', () => {
       expect(validatePassword('123456')).toBeUndefined();
+    });
+  });
+
+  describe('validatePasswordStrength', () => {
+    it('should reject a password under 8 characters', () => {
+      expect(validatePasswordStrength('Ab1!')).toBe('auth.passwordWeak');
+    });
+
+    it('should require an uppercase letter', () => {
+      expect(validatePasswordStrength('abcd123!')).toBe('auth.passwordWeak');
+    });
+
+    it('should require a number', () => {
+      expect(validatePasswordStrength('Abcdefg!')).toBe('auth.passwordWeak');
+    });
+
+    it('should require a special character', () => {
+      expect(validatePasswordStrength('Abcd1234')).toBe('auth.passwordWeak');
+    });
+
+    it('should return undefined for a strong password', () => {
+      expect(validatePasswordStrength('Abcd123!')).toBeUndefined();
+    });
+  });
+
+  describe('validatePasswordMatch', () => {
+    it('should require the confirmation field', () => {
+      expect(validatePasswordMatch('abcd1234', '')).toBe('auth.passwordConfirmRequired');
+    });
+
+    it('should return error when passwords differ', () => {
+      expect(validatePasswordMatch('abcd1234', 'abcd9999')).toBe('auth.passwordMismatch');
+    });
+
+    it('should return undefined when passwords match', () => {
+      expect(validatePasswordMatch('abcd1234', 'abcd1234')).toBeUndefined();
     });
   });
 
